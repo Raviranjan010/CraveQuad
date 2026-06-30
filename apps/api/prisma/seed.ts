@@ -29,6 +29,7 @@ async function main() {
     data: {
       name: 'BITS Pilani Hyderabad Campus',
       address: 'Jawahar Nagar, Shameerpet, Hyderabad, Telangana 500078',
+      emailDomain: 'bits.ac.in',
       isActive: true,
     },
   });
@@ -38,6 +39,7 @@ async function main() {
   // Customers (Student & Faculty)
   const student = await prisma.user.create({
     data: {
+      firebaseUid: 'mock-student-uid',
       name: 'Aarav Patel',
       email: 'aarav.patel@student.bits.ac.in',
       phone: '+919876543210',
@@ -50,6 +52,7 @@ async function main() {
 
   const faculty = await prisma.user.create({
     data: {
+      firebaseUid: 'mock-faculty-uid',
       name: 'Dr. Priya Sharma',
       email: 'priya.sharma@faculty.bits.ac.in',
       phone: '+919876543211',
@@ -63,6 +66,7 @@ async function main() {
   // Vendor Owner Users
   const nescafeOwner = await prisma.user.create({
     data: {
+      firebaseUid: 'mock-nescafe-owner-uid',
       name: 'Ramesh Sen',
       email: 'ramesh.nescafe@vendor.bits.ac.in',
       phone: '+919876543212',
@@ -75,6 +79,7 @@ async function main() {
 
   const canteenOwner = await prisma.user.create({
     data: {
+      firebaseUid: 'mock-canteen-owner-uid',
       name: 'Sanjeev Kumar',
       email: 'sanjeev.canteen@vendor.bits.ac.in',
       phone: '+919876543213',
@@ -87,6 +92,7 @@ async function main() {
 
   const bakeryOwner = await prisma.user.create({
     data: {
+      firebaseUid: 'mock-bakery-owner-uid',
       name: 'Aditya Mehta',
       email: 'aditya.bakery@vendor.bits.ac.in',
       phone: '+919876543214',
@@ -100,6 +106,7 @@ async function main() {
   // Delivery Partner User
   const deliveryRider = await prisma.user.create({
     data: {
+      firebaseUid: 'mock-delivery-rider-uid',
       name: 'Rahul Kumar',
       email: 'rahul.rider@delivery.bits.ac.in',
       phone: '+919876543215',

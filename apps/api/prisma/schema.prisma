@@ -53,6 +53,7 @@ model Campus {
   id               String            @id @default(uuid())
   name             String            @unique
   address          String
+  emailDomain      String?           // Registered university email domain (e.g. bits-hyderabad.ac.in)
   isActive         Boolean           @default(true)
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
@@ -66,6 +67,7 @@ model Campus {
 // 2. User Model (Student, Faculty, Vendor owners, Admins, Riders)
 model User {
   id               String            @id @default(uuid())
+  firebaseUid      String            @unique // Unique Firebase UID link
   name             String
   email            String            @unique
   phone            String?
@@ -88,6 +90,7 @@ model User {
 
   // Indexes for faster logins, campus-based queries, and roles routing
   @@index([email])
+  @@index([firebaseUid])
   @@index([campusId])
   @@index([role])
 }
@@ -120,7 +123,7 @@ model Vendor {
   coupons        Coupon[]       // Vendor-specific discount coupons
 
   // Indexes to quickly find active/open vendors in a campus
-  @@index([campusId, isActive])
+  @@index([campusId, isOpenNow])
   @@index([status])
 }
 
