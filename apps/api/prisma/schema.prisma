@@ -1,0 +1,158 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  CUSTOMER
+  VENDOR
+  ADMIN
+  DELIVERY
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id             String    @id @default(uuid())
+  email          String    @unique
+  name           String
+  phone          String?
+  role           Role      @default(CUSTOMER)
+  avatarUrl      String?
+  firebaseUid    String    @unique
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  restaurants    Restaurant[] @relation("VendorRestaurants")
+  orders         Order[]      @relation("CustomerOrders")
+  deliveryOrders Order[]      @relation("DeliveryPartnerOrders")
+  reviews        Review[]
+}
+
+model Restaurant {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  imageUrl    String?
+  address     String
+  isActive    Boolean  @default(true)
+  rating      Float    @default(5.0)
+  vendorId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  vendor      User       @relation("VendorRestaurants", fields: [vendorId], references: [id], onDelete: Cascade)
+  menuItems   MenuItem[]
+  orders      Order[]
+  reviews     Review[]
+}
+
+model MenuItem {
+  id           String   @id @default(uuid())
+  restaurantId String
+  name         String
+  description  String?
+  price        Float
+  imageUrl     String?
+  isAvailable  Boolean  @default(true)
+  isVeg        Boolean  @default(true)
+  category     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  orderItems   OrderItem[]
+}
+
+model Order {
+  id                String      @id @default(uuid())
+  customerId        String
+  restaurantId      String
+  deliveryPartnerId String?
+  status            OrderStatus @default(PENDING)
+  totalAmount       Float
+  deliveryAddress   String
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  // Relations
+  customer        User        @relation("CustomerOrders", fields: [customerId], references: [id])
+  restaurant      Restaurant  @relation(fields: [restaurantId], references: [id])
+  deliveryPartner User?       @relation("DeliveryPartnerOrders", fields: [deliveryPartnerId], references: [id])
+  items           OrderItem[]
+  payments        Payment[]
+}
+
+model OrderItem {
+  id         String   @id @default(uuid())
+  orderId    String
+  menuItemId String
+  quantity   Int
+  price      Float
+
+  // Relations
+  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id])
+}
+
+model Payment {
+  id               String        @id @default(uuid())
+  orderId          String
+  amount           Float
+  status           PaymentStatus @default(PENDING)
+  razorpayOrderId  String        @unique
+  razorpayPaymentId String?
+  razorpaySignature String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  // Relations
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Coupon {
+  id             String    @id @default(uuid())
+  code           String    @unique
+  discountType   String    // 'PERCENTAGE' or 'FLAT'
+  discountValue  Float
+  maxDiscount    Float?
+  minOrderAmount Float     @default(0.0)
+  isActive       Boolean   @default(true)
+  expiryDate     DateTime
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model Review {
+  id           String   @id @default(uuid())
+  rating       Int      // 1-5 stars
+  comment      String?
+  customerId   String
+  restaurantId String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  customer   User       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+}
