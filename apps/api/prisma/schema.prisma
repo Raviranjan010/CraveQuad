@@ -7,152 +7,341 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// User Roles
 enum Role {
-  CUSTOMER
+  STUDENT
+  FACULTY
   VENDOR
   ADMIN
-  DELIVERY
+  DELIVERY_PARTNER
 }
 
-enum OrderStatus {
+// Vendor Onboarding Status
+enum VendorStatus {
   PENDING
-  CONFIRMED
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+// Order Status Pipeline
+enum OrderStatus {
+  PLACED
+  ACCEPTED
   PREPARING
+  READY
   OUT_FOR_DELIVERY
   DELIVERED
   CANCELLED
 }
 
+// Payment Statuses
 enum PaymentStatus {
   PENDING
   COMPLETED
   FAILED
 }
 
+// Coupon Discount Formats
+enum DiscountType {
+  FLAT
+  PERCENT
+}
+
+// 1. Campus Model (supports multi-campus from day one)
+model Campus {
+  id               String            @id @default(uuid())
+  name             String            @unique
+  address          String
+  isActive         Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  // Relations
+  users            User[]
+  vendors          Vendor[]
+  deliveryPartners DeliveryPartner[]
+}
+
+// 2. User Model (Student, Faculty, Vendor owners, Admins, Riders)
 model User {
-  id             String    @id @default(uuid())
-  email          String    @unique
-  name           String
-  phone          String?
-  role           Role      @default(CUSTOMER)
-  avatarUrl      String?
-  firebaseUid    String    @unique
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id               String            @id @default(uuid())
+  name             String
+  email            String            @unique
+  phone            String?
+  passwordHash     String?           // Nullable if Firebase-only authentication is used
+  role             Role              @default(STUDENT)
+  campusId         String?           // Nullable for global platform administrators
+  isVerified       Boolean           @default(false)
+  isActive         Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   // Relations
-  restaurants    Restaurant[] @relation("VendorRestaurants")
-  orders         Order[]      @relation("CustomerOrders")
-  deliveryOrders Order[]      @relation("DeliveryPartnerOrders")
+  campus           Campus?           @relation(fields: [campusId], references: [id], onDelete: SetNull)
+  vendor           Vendor?           // One-to-One connection for VENDOR role
+  deliveryPartner  DeliveryPartner?  // One-to-One connection for DELIVERY_PARTNER role
+  cart             Cart?             // One-to-One cart per user
+  orders           Order[]           @relation("UserOrders")
+  reviews          Review[]
+  notifications    Notification[]
+
+  // Indexes for faster logins, campus-based queries, and roles routing
+  @@index([email])
+  @@index([campusId])
+  @@index([role])
+}
+
+// 3. Vendor Model (representing campus canteens or shops)
+model Vendor {
+  id             String       @id @default(uuid())
+  userId         String       @unique
+  businessName   String
+  description    String?
+  logoUrl        String?
+  bannerUrl      String?
+  status         VendorStatus @default(PENDING)
+  campusId       String
+  openingHours   Json         // Structured JSON for weekdays opening/closing times
+  isOpenNow      Boolean      @default(true)
+  avgRating      Float        @default(5.0)
+  totalOrders    Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  // Relations
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campus         Campus         @relation(fields: [campusId], references: [id], onDelete: Restrict)
+  menuCategories MenuCategory[]
+  menuItems      MenuItem[]
+  carts          Cart[]         // Active user carts for this vendor
+  orders         Order[]
   reviews        Review[]
+  coupons        Coupon[]       // Vendor-specific discount coupons
+
+  // Indexes to quickly find active/open vendors in a campus
+  @@index([campusId, isActive])
+  @@index([status])
 }
 
-model Restaurant {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  imageUrl    String?
-  address     String
-  isActive    Boolean  @default(true)
-  rating      Float    @default(5.0)
-  vendorId    String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+// 4. Menu Category Model (for grouping item menus: e.g. Snacks, Drinks)
+model MenuCategory {
+  id        String   @id @default(uuid())
+  vendorId  String
+  name      String
+  sortOrder Int      @default(0) // Ordering hierarchy in menus
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  vendor      User       @relation("VendorRestaurants", fields: [vendorId], references: [id], onDelete: Cascade)
-  menuItems   MenuItem[]
-  orders      Order[]
-  reviews     Review[]
+  vendor    Vendor     @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  menuItems MenuItem[]
+
+  @@unique([vendorId, name]) // Unique category names per vendor
+  @@index([vendorId])
 }
 
+// 5. Menu Item Model
 model MenuItem {
-  id           String   @id @default(uuid())
-  restaurantId String
-  name         String
-  description  String?
-  price        Float
-  imageUrl     String?
-  isAvailable  Boolean  @default(true)
-  isVeg        Boolean  @default(true)
-  category     String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id              String    @id @default(uuid())
+  vendorId        String
+  categoryId      String
+  name            String
+  description     String?
+  price           Float
+  imageUrl        String?
+  isVeg           Boolean   @default(true)
+  isAvailable     Boolean   @default(true)
+  prepTimeMinutes Int       @default(10)
+  discountPercent Float?    // Nullable if no active item discount is active
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   // Relations
-  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  vendor       Vendor       @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  category     MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  cartItems    CartItem[]
   orderItems   OrderItem[]
+
+  // Speed up category listings and availability status filters
+  @@index([vendorId, categoryId])
+  @@index([isAvailable])
 }
 
+// 6. Cart Model (one cart per user, linked to a single vendor)
+model Cart {
+  id        String   @id @default(uuid())
+  userId    String   @unique // Enforces single cart per user
+  vendorId  String   // Enforces single-vendor cart at a time
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+
+  @@index([vendorId])
+}
+
+// 7. Cart Item Model
+model CartItem {
+  id         String   @id @default(uuid())
+  cartId     String
+  menuItemId String
+  quantity   Int      @default(1)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  cart       Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  // Enforces unique menu items per user cart
+  @@unique([cartId, menuItemId])
+  @@index([cartId])
+  @@index([menuItemId])
+}
+
+// 8. Order Model
 model Order {
   id                String      @id @default(uuid())
-  customerId        String
-  restaurantId      String
-  deliveryPartnerId String?
-  status            OrderStatus @default(PENDING)
+  userId            String
+  vendorId          String
+  deliveryPartnerId String?     // Nullable if self-pickup or not yet assigned
+  status            OrderStatus @default(PLACED)
   totalAmount       Float
+  deliveryFee       Float       @default(0.0)
+  discountAmount    Float       @default(0.0)
+  paymentStatus     PaymentStatus @default(PENDING)
+  paymentId         String?     // Razorpay Payment ID reference
   deliveryAddress   String
+  deliverySlot      String?     // Flexible delivery time slots (e.g. '12:30 PM - 1:00 PM')
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 
   // Relations
-  customer        User        @relation("CustomerOrders", fields: [customerId], references: [id])
-  restaurant      Restaurant  @relation(fields: [restaurantId], references: [id])
-  deliveryPartner User?       @relation("DeliveryPartnerOrders", fields: [deliveryPartnerId], references: [id])
+  user            User             @relation("UserOrders", fields: [userId], references: [id], onDelete: Restrict)
+  vendor          Vendor           @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  deliveryPartner DeliveryPartner? @relation(fields: [deliveryPartnerId], references: [id], onDelete: Restrict)
   items           OrderItem[]
-  payments        Payment[]
+  payment         Payment?
+  review          Review?
+
+  // High performance query filters
+  @@index([userId, status])
+  @@index([vendorId, status])
+  @@index([deliveryPartnerId, status])
+  @@index([createdAt])
 }
 
+// 9. Order Item Model
 model OrderItem {
-  id         String   @id @default(uuid())
-  orderId    String
-  menuItemId String
-  quantity   Int
-  price      Float
-
-  // Relations
-  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  menuItem MenuItem @relation(fields: [menuItemId], references: [id])
-}
-
-model Payment {
-  id               String        @id @default(uuid())
-  orderId          String
-  amount           Float
-  status           PaymentStatus @default(PENDING)
-  razorpayOrderId  String        @unique
-  razorpayPaymentId String?
-  razorpaySignature String?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-
-  // Relations
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
-}
-
-model Coupon {
-  id             String    @id @default(uuid())
-  code           String    @unique
-  discountType   String    // 'PERCENTAGE' or 'FLAT'
-  discountValue  Float
-  maxDiscount    Float?
-  minOrderAmount Float     @default(0.0)
-  isActive       Boolean   @default(true)
-  expiryDate     DateTime
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-}
-
-model Review {
   id           String   @id @default(uuid())
-  rating       Int      // 1-5 stars
-  comment      String?
-  customerId   String
-  restaurantId String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  orderId      String
+  menuItemId   String
+  quantity     Int
+  priceAtOrder Float    // Captures historical price at order time to avoid menu updates breaking past accounting
 
   // Relations
-  customer   User       @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem     MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([menuItemId])
+}
+
+// 10. Payment Model
+model Payment {
+  id                String        @id @default(uuid())
+  orderId           String        @unique // Enforces 1-to-1 order-payment
+  razorpayOrderId   String        @unique
+  razorpayPaymentId String?       @unique
+  status            PaymentStatus @default(PENDING)
+  amount            Float
+  method            String?       // 'CARD', 'UPI', 'WALLET', etc.
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  // Relations
+  order             Order         @relation(fields: [orderId], references: [id], onDelete: Restrict)
+}
+
+// 11. Coupon Model (Platform-wide or Vendor-specific)
+model Coupon {
+  id             String       @id @default(uuid())
+  code           String       @unique
+  description    String?
+  discountType   DiscountType @default(FLAT)
+  value          Float
+  minOrderAmount Float        @default(0.0)
+  maxDiscount    Float?       // Cap limit for PERCENT type discount
+  validFrom      DateTime
+  validTo        DateTime
+  usageLimit     Int          @default(100) // Total coupon uses allowed
+  perUserLimit   Int          @default(1)   // Uses allowed per single student
+  vendorId       String?      // Nullable indicates platform-wide coupon; populated means vendor-scoped
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  // Relations
+  vendor         Vendor?      @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@index([vendorId])
+  @@index([code])
+}
+
+// 12. Review Model (for Vendor rating aggregates)
+model Review {
+  id         String   @id @default(uuid())
+  userId     String
+  orderId    String   @unique // Enforces one review per order
+  vendorId   String
+  rating     Int      // 1-5 stars
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  // Relations
+  user       User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  vendor     Vendor   @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+
+  @@index([vendorId])
+  @@index([userId])
+}
+
+// 13. Delivery Partner Profile (Student riders / external riders)
+model DeliveryPartner {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  isAvailable    Boolean  @default(true)
+  currentOrderId String?  @unique // Enforces that a rider can handle only one active delivery order at a time
+  campusId       String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campus         Campus   @relation(fields: [campusId], references: [id], onDelete: Restrict)
+  orders         Order[]  // Historical deliveries handled
+
+  @@index([campusId])
+  @@index([isAvailable])
+}
+
+// 14. Notification inbox messages
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  body      String
+  type      String   // E.g., 'ORDER_STATUS', 'PROMO', 'SYSTEM'
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
 }
