@@ -283,6 +283,7 @@ model Coupon {
   validTo        DateTime
   usageLimit     Int          @default(100) // Total coupon uses allowed
   perUserLimit   Int          @default(1)   // Uses allowed per single student
+  isActive       Boolean      @default(true) // Active flag
   vendorId       String?      // Nullable indicates platform-wide coupon; populated means vendor-scoped
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt

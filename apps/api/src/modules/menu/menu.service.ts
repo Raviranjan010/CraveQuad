@@ -7,7 +7,7 @@ export class MenuService {
 
   async findByRestaurant(restaurantId: string) {
     return this.prisma.menuItem.findMany({
-      where: { restaurantId, isAvailable: true },
+      where: { vendorId: restaurantId, isAvailable: true },
     });
   }
 

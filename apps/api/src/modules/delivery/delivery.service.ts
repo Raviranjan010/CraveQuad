@@ -9,7 +9,7 @@ export class DeliveryService {
     return this.prisma.order.findMany({
       where: {
         deliveryPartnerId: partnerId,
-        status: { in: ['CONFIRMED', 'PREPARING', 'OUT_FOR_DELIVERY'] },
+        status: { in: ['ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY'] },
       },
     });
   }

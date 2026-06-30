@@ -55,7 +55,7 @@ export class FirebaseAuthGuard implements CanActivate {
     } catch (error) {
       if (isPublic) return true;
       console.error('Firebase authentication verification error:', error);
-      throw new UnauthorizedException(error.message || 'Token verification failed');
+      throw new UnauthorizedException((error as any).message || 'Token verification failed');
     }
   }
 }
