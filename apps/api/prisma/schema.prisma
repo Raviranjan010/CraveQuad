@@ -109,6 +109,8 @@ model Vendor {
   isOpenNow      Boolean      @default(true)
   avgRating      Float        @default(5.0)
   totalOrders    Int          @default(0)
+  licenseNumber  String?
+  bankDetails    Json?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 

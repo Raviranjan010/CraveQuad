@@ -9,8 +9,6 @@ import {
   TrendingUp, 
   DollarSign, 
   ShoppingBag, 
-  Menu as MenuIcon, 
-  Check, 
   Power, 
   Plus, 
   Trash2, 

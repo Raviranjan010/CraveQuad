@@ -3,7 +3,7 @@ import { RestaurantsService } from './restaurants.service';
 
 @Controller('restaurants')
 export class RestaurantsController {
-  constructor(private readonly restaurantsService: RestaurantsService) {}
+  constructor(private readonly restaurantsService: RestaurantsService) { }
 
   @Get()
   async findAll() {
@@ -15,3 +15,4 @@ export class RestaurantsController {
     return this.restaurantsService.findOne(id);
   }
 }
+

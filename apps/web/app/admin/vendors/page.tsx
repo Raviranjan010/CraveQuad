@@ -12,7 +12,6 @@ import {
   Mail, 
   Phone, 
   Loader2, 
-  AlertCircle,
   Bell
 } from 'lucide-react';
 import { socket } from '../../../lib/socket';

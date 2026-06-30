@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { 
   Building, 
   MapPin, 
-  User, 
   ShieldAlert, 
   ShieldCheck, 
   Search, 

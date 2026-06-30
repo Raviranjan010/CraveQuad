@@ -12,6 +12,8 @@ import { CouponsModule } from './modules/coupons/coupons.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { DeliveryModule } from './modules/delivery/delivery.module';
+import { RedisModule } from './modules/redis/redis.module';
+import { SearchModule } from './modules/search/search.module';
 
 @Module({
   imports: [
@@ -31,6 +33,8 @@ import { DeliveryModule } from './modules/delivery/delivery.module';
     NotificationsModule,
     AdminModule,
     DeliveryModule,
+    RedisModule,
+    SearchModule,
   ],
 })
 export class AppModule {}

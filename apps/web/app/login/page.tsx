@@ -17,7 +17,7 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  const { loginWithEmail, loginWithGoogle, role } = useAuth();
+  const { loginWithEmail, loginWithGoogle } = useAuth();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);

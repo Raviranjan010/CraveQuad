@@ -3,8 +3,6 @@ import {
   Search, 
   MapPin, 
   Clock, 
-  Utensils, 
-  ShoppingBag, 
   ArrowRight, 
   CheckCircle,
   Truck,
