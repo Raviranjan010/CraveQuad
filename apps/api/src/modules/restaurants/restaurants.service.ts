@@ -18,13 +18,14 @@ export class RestaurantsService {
   async findAllFiltered(filters: {
     campusId?: string;
     search?: string;
+    cuisine?: string;
     vegOnly?: boolean;
     minRating?: number;
     sortBy?: string;
     page: number;
     limit: number;
   }) {
-    const { campusId, search, vegOnly, minRating, sortBy, page, limit } = filters;
+    const { campusId, search, cuisine, vegOnly, minRating, sortBy, page, limit } = filters;
     const skip = (page - 1) * limit;
 
     // Build the query conditions
@@ -36,7 +37,15 @@ export class RestaurantsService {
       where.campusId = campusId;
     }
 
-    if (minRating !== undefined) {
+    if (cuisine && cuisine !== 'All') {
+      where.menuCategories = {
+        some: {
+          name: { contains: cuisine, mode: 'insensitive' },
+        },
+      };
+    }
+
+    if (minRating !== undefined && minRating !== null) {
       where.avgRating = { gte: minRating };
     }
 
