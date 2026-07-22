@@ -76,6 +76,7 @@ model User {
   campusId         String?           // Nullable for global platform administrators
   isVerified       Boolean           @default(false)
   isActive         Boolean           @default(true)
+  deviceToken      String?           // Firebase Cloud Messaging device token
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
