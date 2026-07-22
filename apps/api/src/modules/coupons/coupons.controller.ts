@@ -1,7 +1,9 @@
-import { Controller, Get, Query, ParseFloatPipe } from '@nestjs/common';
+import { Controller, Get, Query, ParseFloatPipe, UseGuards } from '@nestjs/common';
 import { CouponsService } from './coupons.service';
+import { FirebaseAuthGuard } from '../auth/firebase-auth.guard';
 
 @Controller('coupons')
+@UseGuards(FirebaseAuthGuard)
 export class CouponsController {
   constructor(private readonly couponsService: CouponsService) {}
 

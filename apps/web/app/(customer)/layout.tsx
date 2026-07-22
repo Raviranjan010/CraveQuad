@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
   Home, 
   Search as SearchIcon, 
@@ -13,11 +13,17 @@ import {
   Plus, 
   Minus, 
   Trash2,
-  ChevronRight
+  ChevronRight,
+  Bell,
+  Check
 } from 'lucide-react';
 import { useCampus } from '../../hooks/useCampus';
 import { useCart } from '../../hooks/useCart';
 import { useAuth } from '../../hooks/useAuth';
+import { io } from 'socket.io-client';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001';
 
 export default function CustomerLayout({
   children,
@@ -25,13 +31,108 @@ export default function CustomerLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { campuses, selectedCampusId, selectedCampusName, setCampus, deliveryAddress, setDeliveryAddress } = useCampus();
   const { cartItems, cartCount, cartSubtotal, updateQuantity, removeFromCart, clearCart, vendorId, vendorName } = useCart();
-  const { dbUser, logout } = useAuth();
+  const { user, dbUser, logout } = useAuth();
   
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAddressEditing, setIsAddressEditing] = useState(false);
   const [tempAddress, setTempAddress] = useState(deliveryAddress);
+
+  // In-app Notification states
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+
+  useEffect(() => {
+    if (!dbUser) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
+
+    const fetchNotifs = async () => {
+      try {
+        const token = await user?.getIdToken();
+        const resCount = await fetch(`${API_URL}/notifications/unread-count`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (resCount.ok) {
+          const data = await resCount.json();
+          setUnreadCount(data.count);
+        }
+
+        const resList = await fetch(`${API_URL}/notifications`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (resList.ok) {
+          const data = await resList.json();
+          setNotifications(data.slice(0, 5)); // show top 5
+        }
+      } catch (err) {
+        console.warn('Failed to fetch notifications:', err);
+      }
+    };
+
+    fetchNotifs();
+
+    // Setup Socket.IO listener for real-time notification alerts
+    const socket = io(SOCKET_URL, {
+      transports: ['websocket', 'polling']
+    });
+
+    socket.on('connect', () => {
+      socket.emit('join:user', { userId: dbUser.id });
+    });
+
+    socket.on('notification:new', (notif: any) => {
+      setUnreadCount(prev => prev + 1);
+      setNotifications(prev => [notif, ...prev].slice(0, 5));
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [dbUser, user]);
+
+  const handleMarkAllRead = async () => {
+    try {
+      const token = await user?.getIdToken();
+      const res = await fetch(`${API_URL}/notifications/read-all`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setUnreadCount(0);
+        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      }
+    } catch (e) {
+      console.warn('Failed to mark all as read:', e);
+    }
+  };
+
+  const handleMarkRead = async (id: string, type: string) => {
+    try {
+      const token = await user?.getIdToken();
+      const res = await fetch(`${API_URL}/notifications/${id}/read`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setUnreadCount(prev => Math.max(0, prev - 1));
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+        
+        // Dynamic navigation if notification contains order update
+        setIsNotifOpen(false);
+        if (type === 'ORDER_STATUS') {
+          router.push('/profile'); // User can see historical orders under profile
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to mark notification as read:', e);
+    }
+  };
 
   const handleAddressSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +158,7 @@ export default function CustomerLayout({
                 Campus<span className="text-[#FF6B35]">Crave</span>
               </span>
             </Link>
-
+ 
             {/* Campus Selector */}
             <div className="relative flex items-center gap-1.5 bg-white border border-[#EAE3D2] px-3 py-1.5 rounded-xl shadow-xs">
               <MapPin className="text-[#FF6B35] h-4 w-4 shrink-0" />
@@ -77,7 +178,7 @@ export default function CustomerLayout({
               </select>
             </div>
           </div>
-
+ 
           {/* Delivery Address Field (Desktop) */}
           <div className="hidden md:flex items-center gap-2 flex-1 max-w-md mx-6">
             {isAddressEditing ? (
@@ -112,9 +213,67 @@ export default function CustomerLayout({
               </div>
             )}
           </div>
-
+ 
           {/* Desktop Right Actions */}
           <div className="flex items-center gap-4">
+            
+            {/* Notification Bell Dropdown */}
+            {dbUser && (
+              <div className="relative">
+                <button 
+                  onClick={() => setIsNotifOpen(!isNotifOpen)}
+                  className="relative flex items-center justify-center p-2 rounded-xl bg-white border border-[#EAE3D2] hover:bg-slate-50 transition-colors shadow-xs"
+                >
+                  <Bell className="h-5 w-5 text-slate-700" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#FF6B35] text-white text-[10px] font-bold shadow-sm">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {isNotifOpen && (
+                  <div className="absolute right-0 mt-2.5 w-80 bg-white border border-[#EAE3D2] rounded-2xl shadow-xl z-50 overflow-hidden py-1">
+                    <div className="px-4 py-3 border-b border-[#FAF6F0] flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-900">Notifications</span>
+                      {unreadCount > 0 && (
+                        <button 
+                          onClick={handleMarkAllRead}
+                          className="text-[10px] text-[#FF6B35] font-semibold hover:underline"
+                        >
+                          Mark all as read
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="max-h-64 overflow-y-auto divide-y divide-[#FAF6F0]">
+                      {notifications.length === 0 ? (
+                        <div className="px-4 py-6 text-center text-xs text-slate-400">
+                          No recent notifications
+                        </div>
+                      ) : (
+                        notifications.map((notif) => (
+                          <div 
+                            key={notif.id}
+                            onClick={() => handleMarkRead(notif.id, notif.type)}
+                            className={`p-3.5 cursor-pointer hover:bg-[#FAF6F0]/50 transition-colors ${!notif.isRead ? 'bg-orange-50/10' : ''}`}
+                          >
+                            <div className="flex justify-between items-start gap-2">
+                              <h4 className={`text-xs font-semibold ${!notif.isRead ? 'text-slate-900 font-bold' : 'text-slate-700'}`}>
+                                {notif.title}
+                              </h4>
+                              {!notif.isRead && <span className="h-2 w-2 rounded-full bg-[#FF6B35] shrink-0 mt-1" />}
+                            </div>
+                            <p className="text-[10px] text-slate-400 mt-0.5">{notif.body}</p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Cart Button */}
             <button 
               onClick={() => setIsCartOpen(true)}
@@ -127,7 +286,7 @@ export default function CustomerLayout({
                 </span>
               )}
             </button>
-
+ 
             {/* Profile Dropdown / Login */}
             {dbUser ? (
               <div className="flex items-center gap-2">
@@ -158,7 +317,7 @@ export default function CustomerLayout({
           </div>
         </div>
       </header>
-
+ 
       {/* Address Bar for Mobile */}
       <div className="md:hidden w-full bg-[#FAF6F0] px-4 py-2 border-b border-[#EAE3D2]">
         {isAddressEditing ? (
@@ -193,12 +352,12 @@ export default function CustomerLayout({
           </div>
         )}
       </div>
-
+ 
       {/* Main Content Area */}
       <main className="flex-1 container mx-auto max-w-7xl px-4 sm:px-6 py-6">
         {children}
       </main>
-
+ 
       {/* Bottom Nav for Mobile */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#EAE3D2] h-16 flex items-center justify-around px-4 shadow-lg">
         <Link 
@@ -235,7 +394,7 @@ export default function CustomerLayout({
           <span>Profile</span>
         </Link>
       </nav>
-
+ 
       {/* Cart Drawer */}
       {isCartOpen && (
         <div className="fixed inset-0 z-50 overflow-hidden">
@@ -244,7 +403,7 @@ export default function CustomerLayout({
             className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity" 
             onClick={() => setIsCartOpen(false)}
           />
-
+ 
           {/* Drawer container */}
           <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
             <div className="w-screen max-w-md bg-[#FAF6F0] shadow-2xl flex flex-col">
@@ -267,7 +426,7 @@ export default function CustomerLayout({
                   <X className="h-5 w-5" />
                 </button>
               </div>
-
+ 
               {/* Drawer Body (Items) */}
               <div className="flex-1 overflow-y-auto p-6 space-y-4">
                 {cartItems.length === 0 ? (
@@ -292,7 +451,7 @@ export default function CustomerLayout({
                       <div className={`h-4 w-4 shrink-0 flex items-center justify-center border rounded-xs ${item.isVeg ? 'border-green-600' : 'border-red-600'} p-0.5`}>
                         <div className={`h-1.5 w-1.5 rounded-full ${item.isVeg ? 'bg-green-600' : 'bg-red-600'}`} />
                       </div>
-
+ 
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <h4 className="text-sm font-semibold text-slate-900 truncate">
@@ -302,7 +461,7 @@ export default function CustomerLayout({
                           ₹{Number(item.price) * item.quantity}
                         </p>
                       </div>
-
+ 
                       {/* Controls */}
                       <div className="flex items-center border border-[#EAE3D2] rounded-lg bg-slate-50 overflow-hidden">
                         <button 
@@ -321,7 +480,7 @@ export default function CustomerLayout({
                           <Plus className="h-3 w-3" />
                         </button>
                       </div>
-
+ 
                       {/* Delete */}
                       <button 
                         onClick={() => removeFromCart(item.id)}
@@ -333,7 +492,7 @@ export default function CustomerLayout({
                   ))
                 )}
               </div>
-
+ 
               {/* Drawer Footer */}
               {cartItems.length > 0 && (
                 <div className="p-6 border-t border-[#EAE3D2] bg-white space-y-4">
@@ -341,7 +500,7 @@ export default function CustomerLayout({
                     <span className="text-slate-500">Subtotal</span>
                     <span className="text-lg font-bold text-slate-900">₹{cartSubtotal}</span>
                   </div>
-
+ 
                   <div className="flex gap-3">
                     <button 
                       onClick={clearCart}
@@ -350,7 +509,7 @@ export default function CustomerLayout({
                       Clear
                     </button>
                     <Link 
-                      href={`/restaurants/${vendorId}?checkout=true`}
+                      href="/checkout"
                       onClick={() => setIsCartOpen(false)}
                       className="flex-1 bg-[#FF6B35] hover:bg-[#e05623] text-white font-semibold text-xs px-6 py-3 rounded-xl flex items-center justify-center gap-2 shadow-md shadow-orange-500/10 transition-colors"
                     >

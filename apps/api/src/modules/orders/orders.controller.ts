@@ -1,10 +1,22 @@
-import { Controller, Get, Param, Patch, Body } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, Req, UseGuards } from '@nestjs/common';
 import { OrdersService } from './orders.service';
-import { OrderStatus } from '@campus-crave/shared-types';
+import { FirebaseAuthGuard } from '../auth/firebase-auth.guard';
+import { OrderStatus } from '@prisma/client';
 
 @Controller('orders')
+@UseGuards(FirebaseAuthGuard)
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
+
+  @Post()
+  async createOrder(@Req() req: any, @Body() body: any) {
+    return this.ordersService.createOrder(req.user.id, body);
+  }
+
+  @Get()
+  async getMyOrders(@Req() req: any) {
+    return this.ordersService.findByUser(req.user.id);
+  }
 
   @Get(':id')
   async findOne(@Param('id') id: string) {
@@ -12,7 +24,11 @@ export class OrdersController {
   }
 
   @Patch(':id/status')
-  async updateStatus(@Param('id') id: string, @Body('status') status: OrderStatus) {
-    return this.ordersService.updateStatus(id, status);
+  async updateStatus(
+    @Param('id') id: string,
+    @Body('status') status: OrderStatus,
+    @Req() req: any,
+  ) {
+    return this.ordersService.updateStatus(id, status, req.user.role, req.user.id);
   }
 }
