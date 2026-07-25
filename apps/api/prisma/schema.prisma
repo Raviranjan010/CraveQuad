@@ -163,7 +163,7 @@ model MenuItem {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  // Relations!
+  // Relations
   vendor       Vendor       @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   category     MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   cartItems    CartItem[]
