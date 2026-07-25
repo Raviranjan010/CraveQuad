@@ -4,7 +4,7 @@ import { Public } from '../auth/public.decorator';
 
 @Controller('menu')
 export class MenuController {
-  constructor(private readonly menuService: MenuService) {}
+  constructor(private readonly menuService: MenuService) { }
 
   @Get()
   @Public()
@@ -19,7 +19,6 @@ export class MenuController {
     const pageNum = page ? parseInt(page, 10) : 1;
     const limitNum = limit ? parseInt(limit, 10) : 20;
     const isVegBool = isVeg === 'true' ? true : isVeg === 'false' ? false : undefined;
-
     return this.menuService.findFiltered({
       restaurantId,
       categoryId,
