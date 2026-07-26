@@ -1,5 +1,4 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/request';
+import { NextResponse, type NextRequest } from 'next/server';
 
 // Decodes JWT payload without verifying signature (done at NestJS API gateway level)
 function parseJwt(token: string) {
