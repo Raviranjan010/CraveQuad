@@ -50,6 +50,7 @@ interface OrderDetails {
     businessEmail: string;
     cuisineType: string[];
   };
+  items: OrderItem[];
   payment: {
     method: 'COD' | 'ONLINE';
     status: string;
