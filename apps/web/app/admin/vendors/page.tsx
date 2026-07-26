@@ -12,7 +12,9 @@ import {
   Mail, 
   Phone, 
   Loader2, 
-  Bell
+  Bell,
+  User,
+  Clock
 } from 'lucide-react';
 import { socket } from '../../../lib/socket';
 
