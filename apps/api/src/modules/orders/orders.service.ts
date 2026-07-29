@@ -245,6 +245,38 @@ export class OrdersService {
     });
   }
 
+  async findActiveVendorOrders(vendorUserId: string) {
+    const vendor = await this.prisma.vendor.findUnique({
+      where: { userId: vendorUserId },
+    });
+    if (!vendor) {
+      throw new NotFoundException('Vendor profile not found for this user');
+    }
+    return this.prisma.order.findMany({
+      where: {
+        vendorId: vendor.id,
+        status: {
+          in: [
+            OrderStatus.PLACED,
+            OrderStatus.ACCEPTED,
+            OrderStatus.PREPARING,
+            OrderStatus.READY,
+          ],
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: true,
+        items: {
+          include: {
+            menuItem: true,
+          },
+        },
+        payment: true,
+      },
+    });
+  }
+
   async findByUser(userId: string) {
     return this.prisma.order.findMany({
       where: { userId },

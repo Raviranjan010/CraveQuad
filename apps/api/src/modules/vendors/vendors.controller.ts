@@ -43,6 +43,19 @@ export class VendorsController {
     return this.vendorsService.getDashboard(profile.id);
   }
 
+  // 2.5 Get current vendor analytics (requires APPROVED status)
+  @Get('me/analytics')
+  @UseGuards(FirebaseAuthGuard, RolesGuard)
+  @Roles(Role.VENDOR)
+  async getMyAnalytics(@Req() req: any, @Query('range') range?: string) {
+    const selectedRange = range || '7d';
+    const profile = await this.vendorsService.getProfileByUserId(req.user.id);
+    if (profile.status !== VendorStatus.APPROVED) {
+      throw new ForbiddenException('Your vendor profile is not approved yet.');
+    }
+    return this.vendorsService.getAnalytics(req.user.id, selectedRange);
+  }
+
   // 3. Self-service profile updates
   @Patch('me')
   @UseGuards(FirebaseAuthGuard, RolesGuard)

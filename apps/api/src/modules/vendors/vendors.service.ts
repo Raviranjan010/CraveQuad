@@ -7,7 +7,6 @@ export class VendorsService {
   constructor(private prisma: PrismaService) {}
 
   async getDashboard(vendorId: string) {
-    // Return mock analytics and queues as requested
     const ordersCount = await this.prisma.order.count({
       where: { vendorId },
     });
@@ -36,7 +35,18 @@ export class VendorsService {
   async getProfileByUserId(userId: string) {
     const vendor = await this.prisma.vendor.findUnique({
       where: { userId },
-      include: { campus: true },
+      include: { 
+        campus: true,
+        menuItems: {
+          include: {
+            category: true,
+          },
+          orderBy: { createdAt: 'desc' },
+        },
+        menuCategories: {
+          orderBy: { sortOrder: 'asc' },
+        },
+      },
     });
     if (!vendor) {
       throw new NotFoundException('Vendor profile not found for this user.');
@@ -58,6 +68,18 @@ export class VendorsService {
     return this.prisma.vendor.update({
       where: { id: vendorId },
       data: dto,
+      include: {
+        campus: true,
+        menuItems: {
+          include: {
+            category: true,
+          },
+          orderBy: { createdAt: 'desc' },
+        },
+        menuCategories: {
+          orderBy: { sortOrder: 'asc' },
+        },
+      },
     });
   }
 
@@ -146,5 +168,84 @@ export class VendorsService {
 
       return updatedVendor;
     });
+  }
+
+  async getAnalytics(vendorUserId: string, range: string) {
+    const vendor = await this.prisma.vendor.findUnique({
+      where: { userId: vendorUserId },
+    });
+    if (!vendor) {
+      throw new NotFoundException('Vendor profile not found');
+    }
+
+    const days = range === '30d' ? 30 : 7;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    // 1. Fetch orders in the range for this vendor
+    const orders = await this.prisma.order.findMany({
+      where: {
+        vendorId: vendor.id,
+        createdAt: { gte: startDate },
+        status: 'DELIVERED', // only count delivered orders for analytics
+      },
+      select: {
+        createdAt: true,
+        totalAmount: true,
+      },
+    });
+
+    // 2. Aggregate revenue and orders count per day
+    const dailyDataMap = new Map<string, { date: string; revenue: number; orders: number }>();
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      dailyDataMap.set(dateStr, { date: dateStr, revenue: 0, orders: 0 });
+    }
+
+    orders.forEach((order) => {
+      const dateStr = new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      if (dailyDataMap.has(dateStr)) {
+        const current = dailyDataMap.get(dateStr)!;
+        current.revenue += order.totalAmount;
+        current.orders += 1;
+      }
+    });
+
+    const dailyData = Array.from(dailyDataMap.values());
+
+    // 3. Top 5 items by quantity sold
+    const topItemsAgg = await this.prisma.orderItem.groupBy({
+      by: ['menuItemId'],
+      where: {
+        order: {
+          vendorId: vendor.id,
+          createdAt: { gte: startDate },
+          status: 'DELIVERED',
+        },
+      },
+      _sum: { quantity: true },
+      orderBy: { _sum: { quantity: 'desc' } },
+      take: 5,
+    });
+
+    const topItems = await Promise.all(
+      topItemsAgg.map(async (agg) => {
+        const item = await this.prisma.menuItem.findUnique({
+          where: { id: agg.menuItemId },
+          select: { name: true },
+        });
+        return {
+          name: item?.name || 'Unknown',
+          quantity: agg._sum.quantity || 0,
+        };
+      })
+    );
+
+    return {
+      dailyData,
+      topItems,
+    };
   }
 }

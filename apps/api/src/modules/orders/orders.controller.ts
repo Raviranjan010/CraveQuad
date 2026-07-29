@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Param, Body, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, Req, UseGuards, ForbiddenException } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { FirebaseAuthGuard } from '../auth/firebase-auth.guard';
 import { OrderStatus } from '@prisma/client';
@@ -16,6 +16,14 @@ export class OrdersController {
   @Get()
   async getMyOrders(@Req() req: any) {
     return this.ordersService.findByUser(req.user.id);
+  }
+
+  @Get('vendor/active')
+  async getActiveVendorOrders(@Req() req: any) {
+    if (req.user.role !== 'VENDOR') {
+      throw new ForbiddenException('Only vendors can access active orders.');
+    }
+    return this.ordersService.findActiveVendorOrders(req.user.id);
   }
 
   @Get(':id')
