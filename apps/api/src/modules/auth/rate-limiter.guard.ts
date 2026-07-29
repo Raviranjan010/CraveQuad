@@ -5,6 +5,7 @@ import Redis from 'ioredis';
 @Injectable()
 export class RateLimiterGuard implements CanActivate {
   private redis: Redis;
+  private hasLoggedConnectionError = false;
 
   constructor(private configService: ConfigService) {
     const host = this.configService.get<string>('REDIS_HOST') || 'localhost';
@@ -15,10 +16,15 @@ export class RateLimiterGuard implements CanActivate {
       host,
       port,
       maxRetriesPerRequest: 1, // Fail fast during local development if Redis is off
+      enableOfflineQueue: false,
+      retryStrategy: () => null,
     });
     
     this.redis.on('error', (err) => {
-      console.warn('Redis rate-limiter connection error. Bypassing rate limit for local development.', err.message);
+      if (!this.hasLoggedConnectionError) {
+        this.hasLoggedConnectionError = true;
+        console.warn('Redis rate-limiter connection error. Bypassing rate limit for local development.', err.message);
+      }
     });
   }
 

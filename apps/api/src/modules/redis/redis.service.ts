@@ -7,6 +7,7 @@ export class RedisService implements OnModuleDestroy {
   private readonly logger = new Logger(RedisService.name);
   private redisClient: Redis | null = null;
   private isConnected = false;
+  private hasLoggedConnectionError = false;
 
   constructor(private readonly configService: ConfigService) {
     const host = this.configService.get<string>('REDIS_HOST') || 'localhost';
@@ -17,6 +18,8 @@ export class RedisService implements OnModuleDestroy {
         host,
         port,
         maxRetriesPerRequest: 1, // Fail fast during local development if Redis is off
+        enableOfflineQueue: false,
+        retryStrategy: () => null,
       });
 
       this.redisClient.on('connect', () => {
@@ -26,7 +29,10 @@ export class RedisService implements OnModuleDestroy {
 
       this.redisClient.on('error', (err) => {
         this.isConnected = false;
-        this.logger.warn(`Redis connection error: ${err.message}. Graceful fallback active.`);
+        if (!this.hasLoggedConnectionError) {
+          this.hasLoggedConnectionError = true;
+          this.logger.warn(`Redis connection error: ${err.message}. Graceful fallback active.`);
+        }
       });
     } catch (err: any) {
       this.isConnected = false;
