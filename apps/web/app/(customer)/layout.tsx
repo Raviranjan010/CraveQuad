@@ -15,7 +15,8 @@ import {
   Trash2,
   ChevronRight,
   Bell,
-  Check
+  Check,
+  ClipboardList
 } from 'lucide-react';
 import { useCampus } from '../../hooks/useCampus';
 import { useCart } from '../../hooks/useCart';
@@ -126,7 +127,7 @@ export default function CustomerLayout({
         // Dynamic navigation if notification contains order update
         setIsNotifOpen(false);
         if (type === 'ORDER_STATUS') {
-          router.push('/profile'); // User can see historical orders under profile
+          router.push('/orders');
         }
       }
     } catch (e) {
@@ -291,6 +292,15 @@ export default function CustomerLayout({
             {dbUser ? (
               <div className="flex items-center gap-2">
                 <Link 
+                  href="/orders" 
+                  className="hidden sm:flex items-center gap-2 bg-white border border-[#EAE3D2] px-3 py-1.5 rounded-xl shadow-xs hover:bg-slate-50 transition-colors"
+                >
+                  <ClipboardList className="h-4 w-4 text-slate-600" />
+                  <span className="text-xs font-semibold text-slate-700">
+                    Orders
+                  </span>
+                </Link>
+                <Link 
                   href="/profile" 
                   className="hidden sm:flex items-center gap-2 bg-white border border-[#EAE3D2] px-3 py-1.5 rounded-xl shadow-xs hover:bg-slate-50 transition-colors"
                 >
@@ -386,6 +396,13 @@ export default function CustomerLayout({
           )}
           <span>Cart</span>
         </button>
+        <Link 
+          href="/orders" 
+          className={`flex flex-col items-center gap-1 text-[10px] font-medium relative ${pathname === '/orders' ? activeTabClass : inactiveTabClass}`}
+        >
+          <ClipboardList className="h-5 w-5" />
+          <span>Orders</span>
+        </Link>
         <Link 
           href="/profile" 
           className={`flex flex-col items-center gap-1 text-[10px] font-medium ${pathname === '/profile' ? activeTabClass : inactiveTabClass}`}
