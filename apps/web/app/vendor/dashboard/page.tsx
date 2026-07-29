@@ -158,6 +158,10 @@ export default function VendorDashboard() {
   const [editingCategory, setEditingCategory] = useState<MenuCategory | null>(null);
   const [editingCatName, setEditingCatName] = useState('');
 
+  // Delete confirmation modal states
+  const [itemToDelete, setItemToDelete] = useState<MenuItem | null>(null);
+  const [categoryToDelete, setCategoryToDelete] = useState<MenuCategory | null>(null);
+
   // Profile forms
   const [profileName, setProfileName] = useState('');
   const [profileDesc, setProfileDesc] = useState('');
@@ -494,23 +498,37 @@ export default function VendorDashboard() {
     }
   };
 
-  const handleDeleteCategory = async (categoryId: string) => {
-    if (!confirm('Are you sure you want to delete this category? All items in this category will also be affected.') || !user) return;
+  const handleDeleteCategory = (category: MenuCategory) => {
+    setCategoryToDelete(category);
+  };
+
+  const confirmDeleteCategory = async () => {
+    if (!categoryToDelete || !user) return;
     try {
       const token = await user.getIdToken();
-      const res = await fetch(`${API_URL}/menu/categories/${categoryId}`, {
+      const res = await fetch(`${API_URL}/menu/categories/${categoryToDelete.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
-        setCategories((prev) => prev.filter((c) => c.id !== categoryId));
-        setMenuItems((prev) => prev.filter((item) => item.categoryId !== categoryId));
+        setCategories((prev) => prev.filter((c) => c.id !== categoryToDelete.id));
+        setMenuItems((prev) => prev.filter((item) => item.categoryId !== categoryToDelete.id));
         toast({
           title: "Category Deleted",
+          description: `Category "${categoryToDelete.name}" was successfully removed.`,
+        });
+      } else {
+        const data = await res.json();
+        toast({
+          variant: "destructive",
+          title: "Delete Failed",
+          description: data.message || "Could not delete category.",
         });
       }
     } catch (err) {
       console.error(err);
+    } finally {
+      setCategoryToDelete(null);
     }
   };
 

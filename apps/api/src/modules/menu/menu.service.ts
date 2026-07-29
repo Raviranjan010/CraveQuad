@@ -128,6 +128,9 @@ export class MenuService {
         discountPercent: data.discountPercent ? parseFloat(data.discountPercent) : null,
         imageUrl: data.imageUrl || null,
       },
+      include: {
+        category: true,
+      },
     });
   }
 
@@ -178,6 +181,9 @@ export class MenuService {
     return this.prisma.menuItem.update({
       where: { id },
       data: updateData,
+      include: {
+        category: true,
+      },
     });
   }
 
