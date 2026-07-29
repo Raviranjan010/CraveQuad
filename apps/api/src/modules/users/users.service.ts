@@ -8,7 +8,7 @@ export class UsersService {
   async findOne(id: string) {
     return this.prisma.user.findUnique({ 
       where: { id },
-      include: { campus: true } 
+      include: { campus: true, vendor: true, deliveryPartner: true } 
     });
   }
 

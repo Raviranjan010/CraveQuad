@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { 
   Search, 
-  MapPin, 
   Star, 
   Clock, 
   Percent, 
@@ -50,7 +49,7 @@ const categories = [
 ];
 
 export default function CustomerHome() {
-  const { selectedCampusId, selectedCampusName, deliveryAddress, setDeliveryAddress } = useCampus();
+  const { selectedCampusId, selectedCampusName } = useCampus();
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchVal, setSearchVal] = useState('');
 

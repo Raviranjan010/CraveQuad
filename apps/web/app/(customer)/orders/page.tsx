@@ -7,13 +7,10 @@ import {
   ShoppingBag, 
   ChevronRight, 
   ChevronDown, 
-  MapPin, 
-  Clock, 
   CreditCard, 
   AlertCircle,
   Star,
   Loader2,
-  HelpCircle,
   Utensils
 } from 'lucide-react';
 import Link from 'next/link';

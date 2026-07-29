@@ -8,8 +8,7 @@ import {
   Delete, 
   Body, 
   UseGuards, 
-  Req, 
-  ForbiddenException 
+  Req
 } from '@nestjs/common';
 import { MenuService } from './menu.service';
 import { Public } from '../auth/public.decorator';

@@ -11,7 +11,6 @@ import {
   Clock, 
   Tag, 
   CreditCard, 
-  Coins, 
   ChevronLeft,
   AlertTriangle,
   CheckCircle,

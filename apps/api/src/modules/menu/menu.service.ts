@@ -162,7 +162,8 @@ export class MenuService {
       categoryId = category.id;
     }
 
-    const { categoryName, ...updateData } = data;
+    const updateData = { ...data };
+    delete updateData.categoryName;
     if (categoryId) {
       updateData.categoryId = categoryId;
     }

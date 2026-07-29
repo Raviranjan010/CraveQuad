@@ -15,7 +15,6 @@ import {
   Trash2,
   ChevronRight,
   Bell,
-  Check,
   ClipboardList
 } from 'lucide-react';
 import { useCampus } from '../../hooks/useCampus';
@@ -33,8 +32,8 @@ export default function CustomerLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { campuses, selectedCampusId, selectedCampusName, setCampus, deliveryAddress, setDeliveryAddress } = useCampus();
-  const { cartItems, cartCount, cartSubtotal, updateQuantity, removeFromCart, clearCart, vendorId, vendorName } = useCart();
+  const { campuses, selectedCampusId, setCampus, deliveryAddress, setDeliveryAddress } = useCampus();
+  const { cartItems, cartCount, cartSubtotal, updateQuantity, removeFromCart, clearCart, vendorName } = useCart();
   const { user, dbUser, logout } = useAuth();
   
   const [isCartOpen, setIsCartOpen] = useState(false);

@@ -12,8 +12,7 @@ import {
   LogOut, 
   Store,
   Shield,
-  Loader2,
-  Check
+  Loader2
 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '../../../hooks/use-toast';

@@ -16,7 +16,7 @@ import { Server, Socket } from 'socket.io';
 export class NotificationsGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
 
-  afterInit(server: Server) {
+  afterInit(_server: Server) {
     console.log('Socket.IO Gateway successfully initialized.');
   }
 

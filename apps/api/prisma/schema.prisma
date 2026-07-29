@@ -219,6 +219,7 @@ model Order {
   totalAmount       Float
   deliveryFee       Float       @default(0.0)
   discountAmount    Float       @default(0.0)
+  couponId          String?     // Coupon ID used for this order (nullable, for usage tracking)
   paymentStatus     PaymentStatus @default(PENDING)
   paymentId         String?     // Razorpay Payment ID reference
   deliveryAddress   String
@@ -239,6 +240,7 @@ model Order {
   @@index([vendorId, status])
   @@index([deliveryPartnerId, status])
   @@index([createdAt])
+  @@index([couponId])
 }
 
 // 9. Order Item Model
@@ -300,13 +302,14 @@ model Coupon {
 
 // 12. Review Model (for Vendor rating aggregates)
 model Review {
-  id         String   @id @default(uuid())
-  userId     String
-  orderId    String   @unique // Enforces one review per order
-  vendorId   String
-  rating     Int      // 1-5 stars
-  comment    String?
-  createdAt  DateTime @default(now())
+  id              String   @id @default(uuid())
+  userId          String
+  orderId         String   @unique // Enforces one review per order
+  vendorId        String
+  rating          Int      // 1-5 stars
+  comment         String?
+  vendorResponse  String?  // Vendor's reply to the review
+  createdAt       DateTime @default(now())
 
   // Relations
   user       User     @relation(fields: [userId], references: [id], onDelete: Restrict)

@@ -2,20 +2,16 @@
 
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { 
   Star, 
   Clock, 
   MapPin, 
-  ChevronRight, 
   Plus, 
   Minus, 
   Percent, 
-  Info,
   ShoppingBag,
-  Check,
   AlertTriangle,
-  Flame,
   ArrowRight
 } from 'lucide-react';
 import { useCart } from '../../../../hooks/useCart';
@@ -57,8 +53,6 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 export default function RestaurantDetail() {
   const { id } = useParams();
-  const searchParams = useSearchParams();
-  const checkoutTriggered = searchParams.get('checkout') === 'true';
 
   const { cartItems, addToCart, updateQuantity, cartCount, cartSubtotal } = useCart();
   

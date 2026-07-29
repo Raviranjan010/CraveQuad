@@ -34,7 +34,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [vendorId, setVendorId] = useState<string | null>(null);
   const [vendorName, setVendorName] = useState<string | null>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
 
   // Sync cart from server when user login state changes
   useEffect(() => {
@@ -52,7 +51,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         } catch (e) {
           console.error('Failed to load cart from local storage', e);
         }
-        setIsLoaded(true);
         return;
       }
 
@@ -100,7 +98,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         console.error('Failed to sync cart from server:', err);
       }
-      setIsLoaded(true);
     }
 
     syncFromServer();

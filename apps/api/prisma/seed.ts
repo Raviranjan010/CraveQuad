@@ -1,4 +1,4 @@
-import { PrismaClient, Role, VendorStatus, OrderStatus, PaymentStatus, DiscountType } from '@prisma/client';
+import { PrismaClient, Role, VendorStatus, DiscountType } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -37,7 +37,7 @@ async function main() {
   // 3. Seed Users
   console.log('Seeding users...');
   // Customers (Student & Faculty)
-  const student = await prisma.user.create({
+  await prisma.user.create({
     data: {
       firebaseUid: 'mock-student-uid',
       name: 'Aarav Patel',
@@ -50,7 +50,7 @@ async function main() {
     },
   });
 
-  const faculty = await prisma.user.create({
+  await prisma.user.create({
     data: {
       firebaseUid: 'mock-faculty-uid',
       name: 'Dr. Priya Sharma',

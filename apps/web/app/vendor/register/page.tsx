@@ -9,13 +9,9 @@ import { auth } from '../../../lib/firebase';
 import { useRouter } from 'next/navigation';
 import { 
   Building, 
-  MapPin, 
   Clock, 
-  FileText, 
   CreditCard, 
   User, 
-  Mail, 
-  Lock, 
   ArrowLeft, 
   ArrowRight, 
   Check, 

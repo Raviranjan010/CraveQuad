@@ -10,9 +10,7 @@ import {
   Search, 
   SlidersHorizontal,
   ChevronLeft,
-  ChevronRight,
-  TrendingUp,
-  Award
+  ChevronRight
 } from 'lucide-react';
 import { useCampus } from '../../../hooks/useCampus';
 

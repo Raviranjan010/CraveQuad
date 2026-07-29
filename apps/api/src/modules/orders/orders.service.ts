@@ -143,6 +143,7 @@ export class OrdersService {
           deliverySlot,
           status: OrderStatus.PLACED,
           paymentStatus: PaymentStatus.PENDING,
+          couponId,
           items: {
             create: cart.items.map((item) => ({
               menuItemId: item.menuItemId,

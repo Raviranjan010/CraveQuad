@@ -5,14 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '../../../../hooks/useAuth';
 import { io, Socket } from 'socket.io-client';
 import { 
-  ShoppingBag, 
-  MapPin, 
-  Clock, 
-  Utensils, 
   CheckCircle2, 
   Loader2, 
-  ChevronRight, 
-  TrendingUp, 
   AlertTriangle,
   CreditCard,
   Phone

@@ -28,7 +28,7 @@ interface Campus {
 }
 
 export default function CompleteSignupPage() {
-  const { user, loading: authLoading, signUpWithEmail, refreshProfile } = useAuth();
+  const { user, loading: authLoading, refreshProfile } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [campuses, setCampuses] = useState<Campus[]>([]);
