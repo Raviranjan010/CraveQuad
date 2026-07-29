@@ -17,7 +17,7 @@ const signupSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters long'),
   campusId: z.string().min(1, 'Please select a campus'),
   role: z.enum(['STUDENT', 'FACULTY'], {
-    required_error: 'Please select your university role',
+    message: 'Please select your university role',
   }),
 });
 

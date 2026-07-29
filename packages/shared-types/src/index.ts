@@ -1,16 +1,26 @@
 // User Roles
-export enum UserRole {
-  CUSTOMER = 'CUSTOMER',
+export enum Role {
+  STUDENT = 'STUDENT',
+  FACULTY = 'FACULTY',
   VENDOR = 'VENDOR',
   ADMIN = 'ADMIN',
-  DELIVERY = 'DELIVERY',
+  DELIVERY_PARTNER = 'DELIVERY_PARTNER',
 }
 
-// Order Statuses
-export enum OrderStatus {
+// Vendor Onboarding Status
+export enum VendorStatus {
   PENDING = 'PENDING',
-  CONFIRMED = 'CONFIRMED',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  SUSPENDED = 'SUSPENDED',
+}
+
+// Order Status Pipeline
+export enum OrderStatus {
+  PLACED = 'PLACED',
+  ACCEPTED = 'ACCEPTED',
   PREPARING = 'PREPARING',
+  READY = 'READY',
   OUT_FOR_DELIVERY = 'OUT_FOR_DELIVERY',
   DELIVERED = 'DELIVERED',
   CANCELLED = 'CANCELLED',
@@ -23,100 +33,244 @@ export enum PaymentStatus {
   FAILED = 'FAILED',
 }
 
-// General User Interface
-export interface IUser {
+// Coupon Discount Formats
+export enum DiscountType {
+  FLAT = 'FLAT',
+  PERCENT = 'PERCENT',
+}
+
+// User Model Interface
+export interface User {
   id: string;
+  firebaseUid: string;
+  name: string;
   email: string;
-  name: string;
   phone?: string;
-  role: UserRole;
-  avatarUrl?: string;
-  createdAt: string | Date;
-  updatedAt: string | Date;
+  passwordHash?: string;
+  role: Role;
+  campusId?: string;
+  isVerified: boolean;
+  isActive: boolean;
+  deviceToken?: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
-// Restaurant / Vendor Interface
-export interface IRestaurant {
+// Campus Model Interface
+export interface Campus {
   id: string;
   name: string;
-  description?: string;
-  imageUrl?: string;
-  vendorId: string;
   address: string;
+  emailDomain?: string;
   isActive: boolean;
-  rating: number;
-  createdAt: string | Date;
-  updatedAt: string | Date;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
-// Menu Item Interface
-export interface IMenuItem {
+// Vendor Model Interface
+export interface Vendor {
   id: string;
-  restaurantId: string;
+  userId: string;
+  businessName: string;
+  description?: string;
+  logoUrl?: string;
+  bannerUrl?: string;
+  status: VendorStatus;
+  campusId: string;
+  openingHours: any;
+  isOpenNow: boolean;
+  avgRating: number;
+  totalOrders: number;
+  licenseNumber?: string;
+  bankDetails?: any;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+// Menu Category Model Interface
+export interface MenuCategory {
+  id: string;
+  vendorId: string;
+  name: string;
+  sortOrder: number;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+// Menu Item Model Interface
+export interface MenuItem {
+  id: string;
+  vendorId: string;
+  categoryId: string;
   name: string;
   description?: string;
   price: number;
   imageUrl?: string;
-  isAvailable: boolean;
   isVeg: boolean;
-  category: string;
-  createdAt: string | Date;
-  updatedAt: string | Date;
+  isAvailable: boolean;
+  prepTimeMinutes: number;
+  discountPercent?: number;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
-// Order Interface
-export interface IOrder {
+// Cart Model Interface
+export interface Cart {
   id: string;
-  customerId: string;
-  restaurantId: string;
+  userId: string;
+  vendorId: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+// Cart Item Model Interface
+export interface CartItem {
+  id: string;
+  cartId: string;
+  menuItemId: string;
+  quantity: number;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+// Order Model Interface
+export interface Order {
+  id: string;
+  userId: string;
+  vendorId: string;
   deliveryPartnerId?: string;
   status: OrderStatus;
   totalAmount: number;
-  deliveryAddress: string;
+  deliveryFee: number;
+  discountAmount: number;
+  paymentStatus: PaymentStatus;
   paymentId?: string;
-  createdAt: string | Date;
-  updatedAt: string | Date;
-  items: IOrderItem[];
+  deliveryAddress: string;
+  deliverySlot?: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
-export interface IOrderItem {
+// Order Item Model Interface
+export interface OrderItem {
   id: string;
   orderId: string;
   menuItemId: string;
   quantity: number;
-  price: number;
-  menuItem?: IMenuItem;
+  priceAtOrder: number;
 }
 
-// Shared DTO Interfaces
-export interface CreateUserDto {
-  email: string;
-  name: string;
-  role: UserRole;
-  phone?: string;
+// Payment Model Interface
+export interface Payment {
+  id: string;
+  orderId: string;
+  razorpayOrderId: string;
+  razorpayPaymentId?: string;
+  status: PaymentStatus;
+  amount: number;
+  method?: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
-export interface CreateOrderDto {
-  restaurantId: string;
-  deliveryAddress: string;
-  items: {
-    menuItemId: string;
-    quantity: number;
-  }[];
-}
-
-export interface CreateRestaurantDto {
-  name: string;
+// Coupon Model Interface
+export interface Coupon {
+  id: string;
+  code: string;
   description?: string;
-  address: string;
-  imageUrl?: string;
+  discountType: DiscountType;
+  value: number;
+  minOrderAmount: number;
+  maxDiscount?: number;
+  validFrom: Date | string;
+  validTo: Date | string;
+  usageLimit: number;
+  perUserLimit: number;
+  isActive: boolean;
+  vendorId?: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+// Review Model Interface
+export interface Review {
+  id: string;
+  userId: string;
+  orderId: string;
+  vendorId: string;
+  rating: number;
+  comment?: string;
+  createdAt: Date | string;
+}
+
+// Delivery Partner Profile Interface
+export interface DeliveryPartner {
+  id: string;
+  userId: string;
+  isAvailable: boolean;
+  currentOrderId?: string;
+  campusId: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+// Notification Interface
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  body: string;
+  type: string;
+  isRead: boolean;
+  createdAt: Date | string;
+}
+
+// DTOs
+export interface CreateOrderDto {
+  deliveryAddress: string;
+  deliverySlot?: string;
+  couponCode?: string;
+  paymentMethod: 'COD' | 'ONLINE';
+  idempotencyKey: string;
+}
+
+export interface UpdateVendorStatusDto {
+  status: VendorStatus;
+  rejectionReason?: string;
 }
 
 export interface CreateMenuItemDto {
+  vendorId: string;
+  categoryId: string;
   name: string;
   description?: string;
   price: number;
   imageUrl?: string;
-  isVeg: boolean;
-  category: string;
+  isVeg?: boolean;
+  isAvailable?: boolean;
+  prepTimeMinutes?: number;
+  discountPercent?: number;
+}
+
+export interface CreateCouponDto {
+  code: string;
+  description?: string;
+  discountType: DiscountType;
+  value: number;
+  minOrderAmount?: number;
+  maxDiscount?: number;
+  validFrom: Date | string;
+  validTo: Date | string;
+  usageLimit?: number;
+  perUserLimit?: number;
+  isActive?: boolean;
+  vendorId?: string;
+}
+
+export interface CreateReviewDto {
+  userId: string;
+  orderId: string;
+  vendorId: string;
+  rating: number;
+  comment?: string;
 }
