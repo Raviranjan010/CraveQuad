@@ -8,6 +8,9 @@ import { useAuth } from '../../hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { Lock, Mail, AlertCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '../../lib/firebase';
+import { useToast } from '../../hooks/use-toast';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -19,27 +22,67 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const { loginWithEmail, loginWithGoogle } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
   });
 
+  const emailValue = watch('email');
+
+  const handleRoleRedirect = (role: string, vendorStatus?: string) => {
+    if (role === 'STUDENT' || role === 'FACULTY') {
+      router.push('/');
+    } else if (role === 'VENDOR') {
+      if (vendorStatus === 'APPROVED') {
+        router.push('/vendor/dashboard');
+      } else {
+        router.push('/vendor/pending');
+      }
+    } else if (role === 'ADMIN') {
+      router.push('/admin/vendors');
+    } else {
+      router.push('/');
+    }
+  };
+
   const onSubmit = async (data: LoginFormValues) => {
     setError(null);
     setLoading(true);
     try {
-      await loginWithEmail(data.email, data.password);
-      // Success will automatically update hook state and middleware redirects
-      router.push('/');
+      const profile = await loginWithEmail(data.email, data.password);
+      toast({
+        title: "Welcome Back",
+        description: "Successfully signed in.",
+      });
+      if (profile) {
+        handleRoleRedirect(profile.role, profile.vendor?.status);
+      } else {
+        router.push('/');
+      }
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'Failed to sign in. Please check your credentials.');
+      let errMsg = 'Failed to sign in. Please check your credentials.';
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
+        errMsg = 'Invalid email or password. Please try again.';
+      } else if (err.code === 'auth/too-many-requests') {
+        errMsg = 'Too many login attempts. Your account has been temporarily locked.';
+      } else if (err.code === 'auth/user-disabled') {
+        errMsg = 'This user account has been disabled.';
+      }
+      setError(errMsg);
+      toast({
+        variant: "destructive",
+        title: "Authentication Failed",
+        description: errMsg,
+      });
     } finally {
       setLoading(false);
     }
@@ -49,11 +92,62 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      await loginWithGoogle();
-      router.push('/');
+      const result = await loginWithGoogle();
+      if (result.isNewUser) {
+        toast({
+          title: "Onboarding Required",
+          description: "Please complete your profile to continue.",
+        });
+        router.push('/signup/complete');
+      } else if (result.role) {
+        toast({
+          title: "Welcome Back",
+          description: "Successfully signed in with Google.",
+        });
+        handleRoleRedirect(result.role, result.vendorStatus);
+      }
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'Google sign-in failed.');
+      let errMsg = 'Google sign-in failed.';
+      if (err.code === 'auth/popup-closed-by-user') {
+        errMsg = 'Google login popup was closed before completion.';
+      }
+      setError(errMsg);
+      toast({
+        variant: "destructive",
+        title: "Sign In Failed",
+        description: errMsg,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    setError(null);
+    if (!emailValue || !z.string().email().safeParse(emailValue).success) {
+      setError('Please enter a valid email address first to reset your password.');
+      return;
+    }
+    setLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, emailValue);
+      toast({
+        title: "Email Sent",
+        description: "Password reset link has been sent to your email.",
+      });
+    } catch (err: any) {
+      console.error(err);
+      let errMsg = 'Failed to send password reset email.';
+      if (err.code === 'auth/user-not-found') {
+        errMsg = 'No user found with this email address.';
+      }
+      setError(errMsg);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: errMsg,
+      });
     } finally {
       setLoading(false);
     }
@@ -108,9 +202,18 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-700">
-                Password
-              </label>
+              <div className="flex items-center justify-between">
+                <label htmlFor="password" className="block text-sm font-medium text-slate-700">
+                  Password
+                </label>
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="text-xs font-semibold text-orange-500 hover:text-orange-600 transition-colors"
+                >
+                  Forgot Password?
+                </button>
+              </div>
               <div className="relative mt-1">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                   <Lock className="h-5 w-5 text-slate-400" />
@@ -157,8 +260,26 @@ export default function LoginPage() {
           <button
             onClick={handleGoogleSignIn}
             disabled={loading}
-            className="flex w-full justify-center items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="flex w-full justify-center items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
           >
+            <svg className="h-5 w-5" viewBox="0 0 24 24">
+              <path
+                fill="#EA4335"
+                d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582l3.51-3.51C17.642 1.091 14.982 0 12 0 7.354 0 3.307 2.67 1.242 6.56l4.024 3.205z"
+              />
+              <path
+                fill="#4285F4"
+                d="M23.738 12.3c0-.828-.074-1.624-.21-2.39H12v4.528h6.586c-.284 1.492-1.127 2.757-2.39 3.606l3.708 2.872c2.17-2 3.834-4.945 3.834-8.616z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M5.266 14.235L1.242 17.44C3.307 21.33 7.354 24 12 24c2.932 0 5.61-.976 7.625-2.656l-3.708-2.872C14.887 19.163 13.514 19.5 12 19.5c-3.736 0-6.9-2.527-8.03-5.96a6.837 6.837 0 0 1 1.296.695z"
+              />
+              <path
+                fill="#34A853"
+                d="M12 19.5c1.514 0 2.887-.337 3.918-.988l3.708 2.872C17.61 23.024 14.932 24 12 24 7.354 24 3.307 21.33 1.242 17.44l4.024-3.205a7.994 7.994 0 0 0 6.734 5.265z"
+              />
+            </svg>
             Google OAuth
           </button>
         </div>

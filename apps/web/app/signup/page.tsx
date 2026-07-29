@@ -6,8 +6,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth } from '../../hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import { Lock, Mail, AlertCircle, Loader2, User, Building, Landmark } from 'lucide-react';
+import { Lock, Mail, AlertCircle, Loader2, User, Landmark, Building } from 'lucide-react';
 import Link from 'next/link';
+import { useToast } from '../../hooks/use-toast';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -30,8 +31,9 @@ interface Campus {
 }
 
 export default function SignupPage() {
-  const { signUpWithEmail } = useAuth();
+  const { signUpWithEmail, loginWithGoogle } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
   const [campuses, setCampuses] = useState<Campus[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -40,6 +42,7 @@ export default function SignupPage() {
     register,
     handleSubmit,
     watch,
+    setError: setErrorField,
     formState: { errors },
   } = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
@@ -67,15 +70,89 @@ export default function SignupPage() {
     loadCampuses();
   }, []);
 
+  const handleRoleRedirect = (role: string, vendorStatus?: string) => {
+    if (role === 'STUDENT' || role === 'FACULTY') {
+      router.push('/');
+    } else if (role === 'VENDOR') {
+      if (vendorStatus === 'APPROVED') {
+        router.push('/vendor/dashboard');
+      } else {
+        router.push('/vendor/pending');
+      }
+    } else if (role === 'ADMIN') {
+      router.push('/admin/vendors');
+    } else {
+      router.push('/');
+    }
+  };
+
   const onSubmit = async (data: SignupFormValues) => {
     setError(null);
+
+    // Client-side domain validation: Show inline field error if it doesn't match
+    const campus = campuses.find((c) => c.id === data.campusId);
+    if (campus && campus.emailDomain) {
+      const emailDomain = campus.emailDomain.toLowerCase();
+      if (!data.email.toLowerCase().endsWith(emailDomain)) {
+        setErrorField('email', {
+          type: 'manual',
+          message: `Your email must match @${campus.emailDomain}`,
+        });
+        return;
+      }
+    }
+
     setLoading(true);
     try {
-      await signUpWithEmail(data.email, data.password, data.name, data.campusId);
+      await signUpWithEmail(data.email, data.password, data.name, data.campusId, data.role);
+      toast({
+        title: "Account Created",
+        description: "Successfully registered and signed in.",
+      });
       router.push('/');
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'Signup failed. Please try again.');
+      toast({
+        variant: "destructive",
+        title: "Registration Failed",
+        description: err.message || 'Signup failed. Please try again.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      const result = await loginWithGoogle();
+      if (result.isNewUser) {
+        toast({
+          title: "Onboarding Required",
+          description: "Please complete your profile to continue.",
+        });
+        router.push('/signup/complete');
+      } else if (result.role) {
+        toast({
+          title: "Welcome Back",
+          description: "Successfully signed in with Google.",
+        });
+        handleRoleRedirect(result.role, result.vendorStatus);
+      }
+    } catch (err: any) {
+      console.error(err);
+      let errMsg = 'Google sign-in failed.';
+      if (err.code === 'auth/popup-closed-by-user') {
+        errMsg = 'Google login popup was closed before completion.';
+      }
+      setError(errMsg);
+      toast({
+        variant: "destructive",
+        title: "Sign In Failed",
+        description: errMsg,
+      });
     } finally {
       setLoading(false);
     }
@@ -247,6 +324,40 @@ export default function SignupPage() {
             </button>
           </div>
         </form>
+
+        <div className="relative flex py-2 items-center">
+          <div className="flex-grow border-t border-slate-200" />
+          <span className="flex-shrink mx-4 text-slate-400 text-xs uppercase">Or continue with</span>
+          <div className="flex-grow border-t border-slate-200" />
+        </div>
+
+        <div>
+          <button
+            onClick={handleGoogleSignIn}
+            disabled={loading}
+            className="flex w-full justify-center items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+          >
+            <svg className="h-5 w-5" viewBox="0 0 24 24">
+              <path
+                fill="#EA4335"
+                d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582l3.51-3.51C17.642 1.091 14.982 0 12 0 7.354 0 3.307 2.67 1.242 6.56l4.024 3.205z"
+              />
+              <path
+                fill="#4285F4"
+                d="M23.738 12.3c0-.828-.074-1.624-.21-2.39H12v4.528h6.586c-.284 1.492-1.127 2.757-2.39 3.606l3.708 2.872c2.17-2 3.834-4.945 3.834-8.616z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M5.266 14.235L1.242 17.44C3.307 21.33 7.354 24 12 24c2.932 0 5.61-.976 7.625-2.656l-3.708-2.872C14.887 19.163 13.514 19.5 12 19.5c-3.736 0-6.9-2.527-8.03-5.96a6.837 6.837 0 0 1 1.296.695z"
+              />
+              <path
+                fill="#34A853"
+                d="M12 19.5c1.514 0 2.887-.337 3.918-.988l3.708 2.872C17.61 23.024 14.932 24 12 24 7.354 24 3.307 21.33 1.242 17.44l4.024-3.205a7.994 7.994 0 0 0 6.734 5.265z"
+              />
+            </svg>
+            Google OAuth
+          </button>
+        </div>
       </div>
     </div>
   );
