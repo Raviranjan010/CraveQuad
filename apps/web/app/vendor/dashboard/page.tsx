@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { 
   Store, 
   Clock, 
-  TrendingUp, 
   DollarSign, 
   ShoppingBag, 
   Power, 
@@ -22,7 +21,6 @@ import {
   BarChart2,
   Layers,
   Sparkles,
-  ChevronRight,
   User,
   MapPin,
   CreditCard,
