@@ -762,6 +762,7 @@ export default function VendorDashboard() {
           updatedLogoUrl = await getDownloadURL(logoRef);
         } catch (err) {
           console.warn("Logo upload failed, using mock logo:", err);
+          updatedLogoUrl = `https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=200&auto=format&fit=crop&q=60`;
         }
         setLogoUploading(false);
       }
@@ -775,6 +776,7 @@ export default function VendorDashboard() {
           updatedBannerUrl = await getDownloadURL(bannerRef);
         } catch (err) {
           console.warn("Banner upload failed, using mock banner:", err);
+          updatedBannerUrl = `https://images.unsplash.com/photo-1498654896293-37aacf113fd9?w=1000&auto=format&fit=crop&q=80`;
         }
         setBannerUploading(false);
       }
@@ -1454,7 +1456,7 @@ export default function VendorDashboard() {
                                     <Edit3 className="h-3.5 w-3.5" />
                                   </button>
                                   <button 
-                                    onClick={() => handleDeleteMenuItem(item.id)}
+                                    onClick={() => handleDeleteMenuItem(item)}
                                     className="p-1 text-slate-400 hover:text-rose-600 transition-colors border border-slate-200 rounded-md bg-white hover:bg-slate-50"
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
@@ -1767,6 +1769,72 @@ export default function VendorDashboard() {
                 className="bg-rose-500 hover:bg-rose-600 text-white font-black rounded-xl px-6 py-2.5 text-xs uppercase tracking-wide shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Reject Order
+              </button>
+            </div>
+          </div>
+        </div>
+      {/* Custom Premium Item Delete Confirmation Modal */}
+      {itemToDelete && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 rounded-xl bg-rose-50 text-rose-500 shrink-0">
+                <Trash2 className="h-6 w-6" />
+              </div>
+              <div>
+                <h4 className="font-extrabold text-slate-800 text-lg">Delete Menu Item?</h4>
+                <p className="text-xs font-semibold text-slate-400 mt-1">
+                  Are you sure you want to permanently delete <span className="text-slate-700 font-extrabold">"{itemToDelete.name}"</span>? This action cannot be undone.
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex gap-2.5 pt-2 justify-end">
+              <button
+                onClick={() => setItemToDelete(null)}
+                className="border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold rounded-xl px-4 py-2.5 text-xs uppercase tracking-wide transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteMenuItem}
+                className="bg-rose-500 hover:bg-rose-600 text-white font-black rounded-xl px-6 py-2.5 text-xs uppercase tracking-wide shadow-sm transition-all"
+              >
+                Delete Item
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Premium Category Delete Confirmation Modal */}
+      {categoryToDelete && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 rounded-xl bg-rose-50 text-rose-500 shrink-0">
+                <AlertCircle className="h-6 w-6" />
+              </div>
+              <div>
+                <h4 className="font-extrabold text-slate-800 text-lg">Delete Category?</h4>
+                <p className="text-xs font-semibold text-slate-400 mt-1">
+                  Are you sure you want to delete category <span className="text-slate-700 font-extrabold">"{categoryToDelete.name}"</span>? All menu items under this category will also be permanently deleted. This action cannot be undone.
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex gap-2.5 pt-2 justify-end">
+              <button
+                onClick={() => setCategoryToDelete(null)}
+                className="border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold rounded-xl px-4 py-2.5 text-xs uppercase tracking-wide transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteCategory}
+                className="bg-rose-500 hover:bg-rose-600 text-white font-black rounded-xl px-6 py-2.5 text-xs uppercase tracking-wide shadow-sm transition-all"
+              >
+                Delete Category
               </button>
             </div>
           </div>
