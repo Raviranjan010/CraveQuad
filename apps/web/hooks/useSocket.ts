@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
+import { Socket } from 'socket.io-client';
 import { socket } from '../lib/socket';
 
-export function useSocket(event: string, callback: (...args: any[]) => void) {
+export function useSocket(event: string, callback: (...args: any[]) => void): Socket {
   useEffect(() => {
     // Automatically connect on initialization
     socket.connect();
