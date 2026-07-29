@@ -77,7 +77,7 @@ export interface Vendor {
   bannerUrl?: string;
   status: VendorStatus;
   campusId: string;
-  openingHours: any;
+  openingHours: any; // Structured JSON for opening/closing times
   isOpenNow: boolean;
   avgRating: number;
   totalOrders: number;
