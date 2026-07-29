@@ -708,10 +708,17 @@ export default function VendorDashboard() {
       // Handle Image Upload if file is present
       if (menuFormFile && savedItem) {
         const itemImageRef = ref(storage, `vendors/${profile.id}/items/${savedItem.id}.jpg`);
+        let downloadUrl = '';
         try {
           await uploadBytes(itemImageRef, menuFormFile);
-          const downloadUrl = await getDownloadURL(itemImageRef);
-          
+          downloadUrl = await getDownloadURL(itemImageRef);
+        } catch (storageErr) {
+          console.warn("Storage upload failed, using high-quality food placeholder:", storageErr);
+          // Fallback image URL
+          downloadUrl = `https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop&q=60`;
+        }
+
+        try {
           // Save image URL
           const imgPatchRes = await fetch(`${API_URL}/menu/${savedItem.id}`, {
             method: 'PATCH',
@@ -725,8 +732,8 @@ export default function VendorDashboard() {
             const finalItem = await imgPatchRes.json();
             setMenuItems((prev) => prev.map((i) => i.id === finalItem.id ? finalItem : i));
           }
-        } catch (storageErr) {
-          console.error("Storage upload failed, fallback used:", storageErr);
+        } catch (patchErr) {
+          console.error("Failed to patch image URL:", patchErr);
         }
       }
 
@@ -815,23 +822,29 @@ export default function VendorDashboard() {
   };
 
   const toggleHoursDay = (day: string) => {
-    setOpeningHours((prev) => ({
-      ...prev,
-      [day]: {
-        ...prev[day],
-        open: !prev[day].open,
-      },
-    }));
+    setOpeningHours((prev) => {
+      const dayData = prev[day] || { open: false, from: '09:00', to: '22:00' };
+      return {
+        ...prev,
+        [day]: {
+          ...dayData,
+          open: !dayData.open,
+        },
+      };
+    });
   };
 
   const updateHoursTime = (day: string, field: 'from' | 'to', value: string) => {
-    setOpeningHours((prev) => ({
-      ...prev,
-      [day]: {
-        ...prev[day],
-        [field]: value,
-      },
-    }));
+    setOpeningHours((prev) => {
+      const dayData = prev[day] || { open: true, from: '09:00', to: '22:00' };
+      return {
+        ...prev,
+        [day]: {
+          ...dayData,
+          [field]: value,
+        },
+      };
+    });
   };
 
   // Group menu items by category name
@@ -1142,7 +1155,7 @@ export default function VendorDashboard() {
                             }}
                             className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-xl py-2.5 text-xs font-black uppercase tracking-wider shadow-sm transition-all"
                           >
-                            {order.deliveryPartnerId ? 'Dispatch Rider' : 'Mark Picked Up / Delivered'}
+                            {order.deliveryPartnerId ? 'Dispatch Rider' : 'Mark Delivered'}
                           </button>
                         )}
                       </div>
@@ -1773,6 +1786,7 @@ export default function VendorDashboard() {
             </div>
           </div>
         </div>
+      )}
       {/* Custom Premium Item Delete Confirmation Modal */}
       {itemToDelete && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
