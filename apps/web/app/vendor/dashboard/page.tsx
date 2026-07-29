@@ -318,7 +318,11 @@ export default function VendorDashboard() {
           return [order, ...prev];
         });
         
-        setNewOrderIds((prev) => new Set([...prev, order.id]));
+        setNewOrderIds((prev) => {
+          const next = new Set(prev);
+          next.add(order.id);
+          return next;
+        });
         
         toast({
           title: "🔔 New Order Received!",
@@ -380,7 +384,7 @@ export default function VendorDashboard() {
     }
   };
 
-  const handleOrderStatusUpdate = async (orderId: string, status: Order.status) => {
+  const handleOrderStatusUpdate = async (orderId: string, status: Order['status']) => {
     if (!user) return;
     try {
       const token = await user.getIdToken();
