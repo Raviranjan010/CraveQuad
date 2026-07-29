@@ -556,23 +556,36 @@ export default function VendorDashboard() {
     }
   };
 
-  const handleDeleteMenuItem = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this menu item?') || !user) return;
+  const handleDeleteMenuItem = (item: MenuItem) => {
+    setItemToDelete(item);
+  };
+
+  const confirmDeleteMenuItem = async () => {
+    if (!itemToDelete || !user) return;
     try {
       const token = await user.getIdToken();
-      const res = await fetch(`${API_URL}/menu/${id}`, {
+      const res = await fetch(`${API_URL}/menu/${itemToDelete.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
-        setMenuItems((prev) => prev.filter((item) => item.id !== id));
+        setMenuItems((prev) => prev.filter((item) => item.id !== itemToDelete.id));
         toast({
           title: "Item Deleted",
-          description: "Menu item successfully removed.",
+          description: `"${itemToDelete.name}" was successfully removed.`,
+        });
+      } else {
+        const data = await res.json();
+        toast({
+          variant: "destructive",
+          title: "Delete Failed",
+          description: data.message || "Could not delete item.",
         });
       }
     } catch (err) {
       console.error(err);
+    } finally {
+      setItemToDelete(null);
     }
   };
 
@@ -1351,7 +1364,7 @@ export default function VendorDashboard() {
                               <Edit3 className="h-3.5 w-3.5" />
                             </button>
                             <button 
-                              onClick={() => handleDeleteCategory(c.id)}
+                              onClick={() => handleDeleteCategory(c)}
                               className="text-slate-400 hover:text-rose-600 transition-colors"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
